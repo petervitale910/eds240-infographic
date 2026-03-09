@@ -2,6 +2,7 @@
 title: "glacier_exploratory"
 format: html
 editor: visual
+cache: TRUE
 ---
 
 ## Load packages
@@ -15,8 +16,7 @@ pacman::p_load('tidyverse',
                'tmap',
                'patchwork',
                'stars',
-               'rnaturalearth'
-               )
+               'rnaturalearth')
 ```
 
 ## Read data
@@ -179,4 +179,213 @@ tm_shape(glacier_cropped)+
 tm_shape(lake_cropped)+
   tm_polygons(fill = 'lake')
 ```
+
+## Questions for fpm 2
+1. What have you learned about your data? Have any potentially interesting patterns emerged? Point to specific visualizations that you created as you describe your findings.
+
+I have learned that the extent of my data is much larger than what I thought it would be. I assumed that the glaciers and lakes would naturally all be in Valle D'Aosta, as that is where I have heard of them being. Instead I found that my glacier data spans the entire alps, with my lakes being concentrated in the Valle. However my lakes stretch as far as the bottom of the French alps. My final visualization showed that the area that I expected to look at, in the Northeast of Aosta, only has a couple of lakes.
+
+
+2. In FPM #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)? Have any new questions emerged?
+
+My second question is a YES! I can definitely use glacier lake size to model glacier recession! I have perimeter and it seems to generally get bigger over time. My first question, so far, is a no. I have to do more research into existing data to see if there is mapped historical glaciers. 
+
+3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
+
+This data is big and long spanning. The issue is to make any sort of meaningful visualization I need to lower the scope, maybe to a couple lakes or a smaller area in general. Furthermore I will have to do some further exploration on the actual lakes to see where they all reside, maybe an animation to show all ~9 of them. 
+I want only miage lake and glacier
+```{r}
+miage <- lake_cropped %>% 
+  filter(lake == 'Miage')
+
+glacier_miage <- glacier_cropped %>% 
+  filter(LIA_ID == 1106)
+```
+
+```{r}
+tmap_mode("plot")
+
+tm_basemap(c(StreetMap = "OpenStreetMap", TopoMap = "OpenTopoMap"))+
+   tm_tiles(c(CartoDB = "CartoDB.PositronOnlyLabels")) +
+tm_shape(aosta_map)+
+  tm_borders()+
+tm_shape(glacier_miage)+
+  tm_polygons(fill = 'LIA_ID')+
+tm_shape(miage)+
+  tm_polygons(fill = 'date_time')
+```
+
+
+```{r}
+glacier_areas <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                        'ghiacciai_aree',
+                        'ghiacciai_aree.shp'))
+
+miage_glacier <- glacier_areas %>% 
+  filter(nome == 'GLACIER DU MIAGE')
+
+miage_label <- miage_glacier[1,]
+
+glacier_basins <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_bacini',
+               'ghiacciai_bacini.shp'))
+
+glacier_centroid <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_centroidi_2005',
+               'ghiacciai_centroidi_2005.shp'))
+
+glacier_lakes <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_laghi_epiglaciali',
+                        'ghiacciai_laghi_epiglaciali.shp'))
+
+miage <- glacier_lakes %>% 
+  filter(grepl("Miage", nome_lago)) %>% 
+  mutate(anno_rilie = as.integer(as.character(anno_rilie)))
+
+glacier_lakes_2021 <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_laghi_epiglaciali_2021',
+               'ghiacciai_laghi_epiglaciali_2021.shp'))
+
+miage_2021 <- glacier_lakes_2021 %>% 
+  filter(grepl("MIAGE", nome)) %>% 
+  mutate(anno_rilie = 2021)
+
+
+glacial_width <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_larghezze',
+               'ghiacciai_larghezze.shp'))
+
+miage_width <- glacial_width %>% 
+  filter(grepl("Miage", nome_gs))
+
+glacier_length <-  st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_lunghezze',
+               'ghiacciai_lunghezze.shp'))
+
+miage_lenth <-  glacier_length %>% 
+  filter(grepl("Miage", nome_gs))
+
+glacier_permimeter <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'ghiacciai_perimetri',
+               'ghiacciai_perimetri.shp'))
+
+miage_perimeter <- glacier_permimeter %>% 
+  filter(grepl("MIAGE", nome_gs)) %>% 
+  mutate(anno = as.integer(as.character(anno)))
+
+idrografia_demanio <- st_read(here::here('data',
+                        'u1412_02-19-2026_20-16-06',
+                  'idrografia_demanio',
+               'idrografia_demanio.shp'))
+```
+
+
+
+```{r}
+tm_basemap(c(StreetMap = "OpenStreetMap", TopoMap = "OpenTopoMap"))+
+   tm_tiles(c(CartoDB = "CartoDB.PositronOnlyLabels")) +
+tm_shape(miage)+
+  tm_polygons(fill = 'blue',
+              fill_alpha = .5,
+              fill.legend = tm_legend(title = 'Miage Lake 2005'))+
+  tm_shape(miage_glacier)+
+  tm_polygons(fill = 'white')+
+tm_shape(miage_2021)+
+  tm_polygons(fill = 'anno_rilie',
+              fill_alpha = .5)+
+  tm_add_legend(
+  labels = c("2005", "2021"), 
+  fill = c("blue", "red"), 
+  title = "Year"
+)
+```
+
+```{r}
+tm_layout(bg.color = '#021526',
+          outer.bg.color = '#002340',
+          frame.color = 'white',
+          frame.lwd = 2)+
+tm_shape(miage) +
+  tm_polygons(fill = 'anno_rilie',
+              fill.scale = tm_scale_categorical(values = c('lightblue', 'darkblue')),
+               fill.legend = tm_legend(show = FALSE))+
+   tm_tiles(c(CartoDB = "CartoDB.PositronOnlyLabels"))+
+  tm_shape(miage_glacier)+
+  tm_polygons(fill = 'white',
+              col = '#08316B',
+              lwd = 3)+
+  tm_shape(miage_2021)+
+  tm_polygons(fill = 'anno_rilie',
+              fill.scale = tm_scale_categorical(
+                values = 'red'),
+              fill_alpha = .5,
+              fill.legend = tm_legend(show = FALSE))+
+tm_add_legend(type = 'polygons', 
+              labels = c('1999', '2006', '2021'), 
+              fill = c('lightblue', 'darkblue', 'red'),
+               bg.color = "#002340",
+              text.color = 'white',
+              title.color = 'white',
+              frame.color = 'white',
+              frame.lwd = 2,
+              title = 'Year') 
+
+  
+```
+
+```{r}
+
+tm_style("cobalt") +
+tm_basemap('CartoDB.DarkMatter') +
+  tm_tiles(c(CartoDB = "CartoDB.PositronOnlyLabels"))+
+tm_shape(miage_glacier)+
+  tm_polygons(fill = 'white')+
+tm_shape(miage_perimeter)+
+ tm_lines(col = 'anno', 
+          col.scale = tm_scale_ordinal(values = 'blues'),
+          col.legend = tm_legend(title = 'Year'),
+         lwd = 4)+
+tm_shape(miage_label)+
+  tm_text(
+    text = 'nome',
+    col = 'black',
+    xmod = 0, 
+    ymod = -3.1,
+   angle = -45,
+   size  = .7
+  )
+  
+```
+```{r}
+miage_area <- lake_joined %>% 
+  filter(grepl("Miage", lake)) %>% 
+  group_by(date_time) %>% 
+  summarize(total_area = sum(area_m_2, na.rm = TRUE)) %>% 
+  ggplot(aes(x = date_time, y = total_area)) +
+  geom_point(color = 'white')+
+  geom_line(color = 'white')+
+  labs(
+    title = 'Miage Lake Area Over Time',
+    x = 'Year',
+    y = 'Total Area (Square Meters)'
+  )+
+  theme_tufte()+
+  theme(legend.position = 'none',
+        plot.background = element_rect(fill = '#002340'),
+        axis.title = element_text(color = 'white'),
+        axis.text = element_text(color = 'white'),
+        plot.title = element_text(color = 'white')
+        )
+
+miage_area
+```
+
 
