@@ -53,8 +53,7 @@ pacman::p_load('tidyverse',
                'patchwork',
                'stars',
                'rnaturalearth',
-               'showtext',
-               'ggmap')
+               'showtext')
 ```
 
 ### Read data
@@ -307,3 +306,5 @@ I currently am using tmap heavily. I may want to migrate these to ggplot, but I 
 4. What feedback do you need from the instructional team and / or your peers to ensure that your intended message and key insights are clear?
 
 I would like to know if it is visible that there has been glacier recession in my first plot. I also noticed that if I plot perimeters instead of areas in the third plot I get an increasing line. What could I do to plot these lines on top of eachother to further show fragmentation.
+
+Begin by reviewing the feedback you received on FPM #3 from your instructional team and from your in-lab peer reviews. Make a short plan describing what specific changes you intend to make based on that feedback. Respond to the following in an issue titled, FPM4 - reviewing feedback
